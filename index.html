@@ -16,6 +16,16 @@
       .shower {
         --slide-ratio: calc(16 / 9);
       }
+      table.query-results thead tr {
+          border: solid 1px gray;
+      }
+      table.query-results thead td {
+          font-weight: bold;
+          background-color: white;
+      }
+      table.query-results tbody tr {
+          border: solid 1px gray;
+      }
     </style>
   </head>
 
@@ -33,48 +43,743 @@
     </header>
 
     <section id="title" class="slide title" inlist="" rel="schema:hasPart" resource="#title">
-      <h2 property="schema:name">SPARQL Query Evaluation</h2>
+      <h2 property="schema:name">SPARQL Query Processing</h2>
+      <h3>How do SPARQL query engines work?</h3>
       <ul class="author inline">
           <li class="current"><a href="https://www.rubensworks.net/">Ruben Taelman</a></li>
       </ul>
       <p class="affiliation"><a href="http://idlab.technology/">Ghent University – imec – IDLab, Belgium</a></p>
     </section>
 
-    <section id="start" class="slide" style="background-image: url('img/TODO.jpg')" inlist="" rel="schema:hasPart" resource="#start">
-        <h2 property="schema:name" class="big" style="margin-top: 20px; color: white; text-shadow: 2px 2px black">INTRO</h2>
-        <ul style="color: white; text-shadow: 2px 2px black; font-size: 1.3em">
-            <li>TODO</li>
+    <section id="start" class="slide" inlist="" rel="schema:hasPart" resource="#start">
+        <h2 property="schema:name">SPARQL querying over RDF datasets</h2>
+        <ul>
+            <li><strong>SPARQL</strong>: language to read and update RDF datasets via <em>declarative queries</em>.</li>
+            <li>
+                Different query forms:<br /><br />
+                <ul>
+                    <li><code>SELECT</code>: selecting values in tabular form<span class="next"> <strong>&rarr; focus of this presentation</strong></span></li>
+                    <li><code>CONSTRUCT</code>: construct new triples</li>
+                    <li><code>ASK</code>: check if data exists</li>
+                    <li><code>DESCRIBE</code>: describe a given resource</li>
+                    <li><code>INSERT</code>: insert new triples</li>
+                    <li><code>DELETE</code>: delete existing triples</li>
+                </ul>
+            </li>
         </ul>
+        <p>Specification: <a href="https://www.w3.org/TR/sparql-query/">https://www.w3.org/TR/sparql-query/</a></p>
+    </section>
+    
+    <section id="example" class="slide" inlist="" rel="schema:hasPart" resource="#example" style="font-size: 0.9em">
+        <h2 property="schema:name">Find all artists born in York</h2>
+        <ul>
+            <li><pre>SELECT ?name ?deathDate WHERE {
+  ?person a dbpedia-owl:Artist;
+          rdfs:label ?name;
+          dbpedia-owl:birthPlace [ rdfs:label "York"@en ].
+  FILTER LANGMATCHES(LANG(?name),  "EN")
+  OPTIONAL { ?person dbpprop:dateOfDeath ?deathDate. }
+}
+</pre></li>
+        </ul>
+        <table class="next query-results">
+            <thead>
+                <tr><td>name</td><td>deathDate</td></tr>
+            </thead>
+            <tbody>
+                <tr><td>Albert Joseph Moore</td><td></td></tr>
+                <tr><td>Charles Francis Hansom</td><td>1888</td></tr>
+                <tr><td>David Reed (comedian)</td><td></td></tr>
+                <tr><td>Dustin Gee</td><td></td></tr>
+                <tr><td>E Ridsdale Tate</td><td>1922</td></tr>
+            </tbody>
+        </table>
+    </section>
+    
+    <section id="how1" class="slide" inlist="" rel="schema:hasPart" resource="#how1">
+        <h2 property="schema:name" class="big">How do query engines process a query?</h2>
+        <p style="text-align: center; font-size: 1.3em" class="next">
+            RDF dataset + SPARQL query <br/>
+            &darr;<br />
+            <strong>...</strong><br />
+            &darr;<br/>
+            query results
+        </p>
+    </section>
+    
+    <section id="how2" class="slide" inlist="" rel="schema:hasPart" resource="#how2">
+        <h2 property="schema:name" class="big">How do query engines process a query?</h2>
+        <p style="text-align: center; font-size: 1.3em">
+            RDF dataset + SPARQL query <br/>
+            &darr;<br />
+            <strong>SPARQL query processing</strong><br />
+            &darr;<br/>
+            query results
+        </p>
     </section>
 	
     <section id="index" class="slide index" inlist="" rel="schema:hasPart" resource="#index">
       <ul>
-        <li><a href="#index-a">TODO</a></li>
-		<li><a href="#index-b">TODO</a></li>
+        <li><a href="#index-basics">Basics and Terminology</a></li>
+		<li><a href="#index-parsing">Parsing</a></li>
+        <li><a href="#index-optimization">Optimization</a></li>
+        <li><a href="#index-evaluation">Evaluation</a></li>
       </ul>
     </section>
     
-    <section id="index-a" class="slide index" inlist="" rel="schema:hasPart" resource="#index-a">
+    <section id="index-basics" class="slide index" inlist="" rel="schema:hasPart" resource="#index-basics">
       <ul>
-        <li class="current"><a href="#index-a">TODO</a></li>
-		<li><a href="#index-b">TODO</a></li>
+        <li class="current"><a href="#index-basics">Basics and Terminology</a></li>
+		<li><a href="#index-parsing">Parsing</a></li>
+        <li><a href="#index-optimization">Optimization</a></li>
+        <li><a href="#index-evaluation">Evaluation</a></li>
       </ul>
     </section>
 	
-    <section id="some-slide" class="slide" inlist="" rel="schema:hasPart" resource="#some-slide">
-      <h2 property="schema:name">TODO: A regular slide</h2>
+    <section id="basics-restrict" class="slide" inlist="" rel="schema:hasPart" resource="#basics-restrict">
+      <h2 property="schema:name">Basic Graph Patterns enable graph pattern matching</h2>
       <ul>
           <li>
-          	  <h3>A</h3>
-			  <span class="indent">TODO: Description</span>
+          	  <h3>Basic Graph Pattern (BGP)</h3>
+			  <span class="indent">A collection of <em>triple patterns</em>.</span>
           </li>
-          <li>B</li>
-          <li>C</li>
+          <li>
+<pre style="font-size: 0.8em">    ?person a dbpedia-owl:Artist.
+    ?person rdfs:label ?name.
+    ?person dbpedia-owl:birthPlace ?birthPlace.
+</pre></li>
+          <li>
+          	  <h3>Triple Pattern</h3>
+			  <span class="indent">A triple in which any component may be a variable.</span><br />
+			  <span class="indent">Variables start with <code>?</code>, followed by a <em>label</em>. (e.g. <code>?name</code>)</span>
+          </li>
+          <li>
+          	  <h3>More complex operators are possible</h3>
+    		  <span class="indent"><code>OPTIONAL</code>, <code>UNION</code>, <code>FILTER</code>, ...</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="basics-solutions" class="slide" inlist="" rel="schema:hasPart" resource="#basics-solutions">
+      <h2 property="schema:name">Query results representation</h2>
+      <ul>
+          <li>
+          	  <h3>Solution Mapping</h3>
+			  <span class="indent">Mapping from a set of variable labels to a set of RDF terms.</span>
+          </li>
+          <li>
+          	  <h3>Solution Sequence</h3>
+			  <span class="indent">A list of solution mappings.</span>
+          </li>
+      </ul>
+      <em>1 solution sequence with 3 solution mappings:</em>
+      <table class="query-results">
+          <thead>
+              <tr><td>name</td><td>birthplace</td></tr>
+          </thead>
+          <tbody>
+              <tr><td>Bob Brockmann</td><td>http://dbpedia.org/resource/Louisiana</td></tr>
+              <tr><td>Bennie Nawahi</td><td>http://dbpedia.org/resource/Honolulu</td></tr>
+              <tr><td>Weird Al Yankovic</td><td>http://dbpedia.org/resource/Downey,_California</td></tr>
+          </tbody>
+      </table>
+    </section>
+    
+    <section id="basics-steps" class="slide" inlist="" rel="schema:hasPart" resource="#basics-steps">
+      <h2 property="schema:name">Steps in SPARQL query processing</h2>
+      <ul>
+          <li>
+          	  <h3>1. Parsing</h3>
+			  <span class="indent">Transform a SPARQL query string into an algebra expression</span>
+          </li>
+          <li>
+          	  <h3>2. Optimization</h3>
+			  <span class="indent">Transform algebra expression into a query plan</span>
+          </li>
+          <li>
+          	  <h3>3. Evaluation</h3>
+			  <span class="indent">Executes query plan to obtain query results</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="index-parsing" class="slide index" inlist="" rel="schema:hasPart" resource="#index-parsing">
+      <ul>
+        <li><a href="#index-basics">Basics and Terminology</a></li>
+		<li class="current"><a href="#index-parsing">Parsing</a></li>
+        <li><a href="#index-optimization">Optimization</a></li>
+        <li><a href="#index-evaluation">Evaluation</a></li>
+      </ul>
+    </section>
+    
+    <section id="parsing-ast" class="slide" inlist="" rel="schema:hasPart" resource="#parsing-ast">
+      <h2 property="schema:name">Parsing: transform query string into SPARQL Algebra</h2>
+      <ul>
+          <li>
+          	  <h3>SPARQL Algebra = Abstract Syntax Tree (AST)</h3>
+			  <span class="indent">Algebraic <strong>datastructure</strong> that represents the query structure</span><br /><br />
+              <span class="indent">Tree where each node is a separate <strong>operator</strong>: join, BGP, filter, ...</span><br /><br />
+              <span class="indent"><strong>Easier</strong> for engines to work with than strings</span><br /><br />
+              <span class="indent">Enables algebraic query <strong>optimizations</strong></span><br /><br />
+              <span class="indent">A.k.a <em>query plan</em> &rarr; basis for <strong>query planning</strong></span><br /><br />
+          </li>
+      </ul>
+    </section>
+    
+    <section id="parsing-ast-example" class="slide" inlist="" rel="schema:hasPart" resource="#parsing-ast-example">
+      <h2 property="schema:name">SPARQL Algebra example</h2>
+      <div style="float:left; width: 400px; height: 500px">
+        Input: <pre style="font-size: 0.5em">SELECT ?x ?y ?z WHERE {
+  ?x ?y ?z
+}</pre>
+      </div>
+      <div>
+        Output: <pre style="font-size: 0.5em">{
+  "type": "project",
+  "input": {
+    "type": "bgp",
+    "patterns": [
+      {
+        "type": "pattern",
+        "subject": {
+          "termType": "Variable",
+          "value": "x"
+        },
+        "predicate": {
+          "termType": "Variable",
+          "value": "y"
+        },
+        "object": {
+          "termType": "Variable",
+          "value": "z"
+        }
+      }
+    ]
+  },
+  "variables": [
+    { "termType": "Variable",
+      "value": "x" },
+    { "termType": "Variable",
+      "value": "y" },
+    { "termType": "Variable",
+      "value": "z" }
+  ]
+}</pre>
+      </div>
+    </section>
+    
+    <section id="index-optimization" class="slide index" inlist="" rel="schema:hasPart" resource="#index-optimization">
+      <ul>
+        <li><a href="#index-basics">Basics and Terminology</a></li>
+		<li><a href="#index-parsing">Parsing</a></li>
+        <li class="current"><a href="#index-optimization">Optimization</a></li>
+        <li><a href="#index-evaluation">Evaluation</a></li>
+      </ul>
+    </section>
+    
+    <section id="optimization-types" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-types">
+      <h2 property="schema:name">Why is optimization needed?</h2>
+      <ul>
+          <li>
+          	  <h3>Queries are declarative</h3>
+			  <span class="indent">They say <em>what</em> needs to be done, not <em>how</em>.</span><br /><br />
+              <span class="indent">Transformation into executable code can happen in many different ways.</span>
+          </li>
+          <li>
+          	  <h3>Factors that influence performance</h3>
+              <span class="indent">Dataset</span><br /><br />
+			  <span class="indent">Order of operators in AST</span><br /><br />
+              <span class="indent">Available operator algorithm implementations</span><br /><br />
+              <span class="indent">Available data indexes</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="optimization-types" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-types">
+      <h2 property="schema:name">Different levels of optimization</h2>
+      <ul>
+          <li>
+          	  <h3>Algebraic optimization</h3>
+			  <span class="indent">Independent of underlying data</span><br /><br />
+              <span class="indent">Based on formally provable equivalence of operations</span>
+          </li>
+          <li>
+          	  <h3>Low-level optimization</h3>
+			  <span class="indent">Based on the underlying data</span><br /><br />
+              <span class="indent">Select and configure specific algorithms of algebra operators</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="optimization-algebraic" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-algebraic">
+      <h2 property="schema:name">Algebraic optimization</h2>
+      <ul>
+          <li>
+          	  <h3>Data-independent</h3>
+			  <span class="indent">Independent of the underlying dataset</span><br /><br />
+              <span class="indent">Based on heuristics</span>
+          </li>
+          <li>
+          	  <h3>Preserves evaluation semantics</h3>
+			  <span class="indent">Optimized algebra produces same results as executing unoptimized algebra</span>
+          </li>
+          <li>
+          	  <h3>Trade-off between optimization and performance</h3>
+			  <span class="indent">Algebraic optimization can take a lot of time,</span><br />
+              <span class="indent">sometimes even more than execution the sub-optimal algebra.</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="optimization-algebraic-orderby-distinct" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-algebraic-orderby-distinct">
+      <h2 property="schema:name">Example: <code>ORDER BY</code> + <code>DISTINCT</code></h2>
+      <ul>
+          <li>
+			  <span><code>ORDER BY</code>: Sort solution mappings by the given variable</span>
+          </li>
+          <li>
+			  <span><code>DISTINCT</code>: Remove duplicate solution mappings</span>
+          </li>
+          <li>
+			  <span>SPARQL requires <code>DISTINCT</code> to happen <em>after</em> <code>ORDER BY</code></span>
+          </li>
+          <li>
+			  <span>Performance issues when sorting many non-distinct solution mappings</span>
+          </li>
+          <li>
+			  <span>Optimization: Apply <code>DISTINCT</code> before <code>ORDER BY</code></span>
+          </li>
+      </ul>
+          <div style="float: left; width: 400px; height: 400px;">
+              Input:
+              <pre style="font-size: 0.7em">{
+  "type": "distinct",
+  "input": {
+    "type": "orderby",
+    "variable": "x",
+    "input": { ... }
+  }
+}</pre>
+          </div>
+          <div>
+              Output:
+              <pre style="font-size: 0.7em">{
+  "type": "orderby",
+  "variable": "x",
+  "input": {
+    "type": "distinct",
+    "input": { ... }
+  }
+}</pre>
+          </div>
+      </div>
+    </section>
+    
+    <section id="optimization-lowlevel" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-lowlevel">
+      <h2 property="schema:name">Low-level optimization</h2>
+      <ul>
+          <li>
+          	  <h3>Data-dependent</h3>
+			  <span class="indent">Based on the underlying dataset, statistics, and derived indexes.</span>
+          </li>
+          <li>
+          	  <h3>Minimize computational complexity</h3>
+			  <span class="indent">Reduce the number of intermediary solution mappings.</span>
+          </li>
+          <li>
+          	  <h3>Select and configure specific algorithms of algebra operators</h3>
+			  <span class="indent">Different algorithms behave better in certain situations.</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="optimization-lowlevel-joinorder" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-lowlevel-joinorder">
+      <h2 property="schema:name">Example: joining in BGPs</h2>
+      <h3>How, and in what order should triple patterns be evaluated?</h3>
+      <p>
+          1. <code>?person a dbpedia-owl:Artist.</code>
+      </p>
+      <p>
+          2. <code>?person rdfs:label ?name.</code>
+      </p>
+      <p>
+          3. <code>?person dbpedia-owl:birthPlace ?birthPlace.</code>
+      </p>
+    </section>
+    
+    <section id="optimization-lowlevel-joinorder-factors" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-lowlevel-factors">
+      <h2 property="schema:name">Different factors influence join order</h2>
+      <ul>
+          <li>
+          	  <h3>Cardinality of each pattern</h3>
+              <span class="indent">Can be exact, or an estimate</span>
+          </li>
+          <li>
+          	  <h3>Complexity of join algorithms</h3>
+              <span class="indent">Based on cardinalities of patterns</span>
+          </li>
+          <li>
+          	  <h3>Precomputing steps of join algorithms</h3>
+              <span class="indent">Precomputation may be too expensive for low cardinalities</span>
+          </li>
+          <li>
+          	  <h3>Restrictions of join algorithms</h3>
+              <span class="indent">Some algorithms only work in certain cases</span>
+          </li>
+          <!--<li>
+          	  <h3>Join cardinality statistics of patterns</h3>
+              <span class="indent">Statistics on intermediate results when joining two patterns</span><br />
+              <span class="indent"><em>Difficult to store and manage!</em></span>
+          </li>-->
+      </ul>
+    </section>
+    
+    <section id="optimization-lowlevel-joinorder-cardinality" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-lowlevel-cardinality">
+      <h2 property="schema:name">Obtain cardinality of each pattern</h2>
+      <p>
+          1. <code>?person a dbpedia-owl:Artist.</code>
+          <span style="font-weight: bold; float: right">200</span>
+      </p>
+      <p>
+          2. <code>?person rdfs:label ?name.</code>
+          <span style="font-weight: bold; float: right">10.000</span>
+      </p>
+      <p>
+          3. <code>?person dbpedia-owl:birthPlace ?birthPlace.</code>
+          <span style="font-weight: bold; float: right">1.000</span>
+      </p>
+      <h3>Can be pre-computed, or estimated at runtime.</h3>
+    </section>
+    
+    <section id="optimization-lowlevel-joinorder-algorithms" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-lowlevel-algorithms" style="font-size: 0.85em">
+      <h2 property="schema:name">Select appropriate join algorithms</h2>
+      <em>Usually happens in pairs of two operators (<code>n</code>, <code>m</code>)</em>
+      <ul>
+          <li>
+          	  <h3>Nested-loop join</h3>
+			  <span class="indent">Double for-loop &rarr; <code>O(n*m)</code></span><br />
+              <span class="indent">Works well for small sequences due to the lack of preprocessing.</span>
+          </li>
+          <li>
+          	  <h3>Hash join</h3>
+			  <span class="indent">Precomputes hash tables for all mappings in one solution sequence.</span><br />
+              <span class="indent">Iterates over other solution sequence with lookups to hash table &rarr; <code>O(n+m)</code></span><br />
+              <span class="indent">Not possible with <code>OPTIONAL</code></span>
+          </li>
+          <li>
+          	  <h3>Sort-merge join</h3>
+			  <span class="indent">Sort solution sequences.</span><br />
+              <span class="indent">Iterates over both solution sequences in order &rarr; <code>O(n+m)</code></span><br />
+              <span class="indent">Sorting can become expensive with larger solution sequences</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="optimization-lowlevel-joinorder-order" class="slide" inlist="" rel="schema:hasPart" resource="#optimization-lowlevel-order" style="font-size: 0.9em">
+      <h2 property="schema:name">Join orders and algorithms influence worst-case complexity</h2>
+      <ul>
+          <li>
+          	  <h3>All nested-loop join</h3>
+              <span class="indent"><code>((1 ⋈ 2) ⋈ 3) = ((200 * 10.000) * 1.000) = 2.000.000.000</code></span>
+          </li>
+          <li>
+          	  <h3>All hash join</h3>
+              <span class="indent"><code>((1 ⋈ 2) ⋈ 3) = ((200 + 10.000) + 1.000) = 11.200</code></span>
+          </li>
+          <li>
+          	  <h3>Nested-loop join and hash join</h3>
+              <span class="indent"><code>((1 ⋈ 3) ⋈ 2) = ((200 * 1.000) + 10.000) = 210.000</code></span>
+          </li>
+      </ul>
+      <p>&rarr; Restrictions and preprocessing steps (sorting, hashing, ...) not yet taken into account</p>
+      <p>&rarr; Trade-off between different factors that influence join order</p>
+    </section>
+    
+    <section id="index-evaluation" class="slide index" inlist="" rel="schema:hasPart" resource="#index-evaluation">
+      <ul>
+        <li><a href="#index-basics">Basics and Terminology</a></li>
+		<li><a href="#index-parsing">Parsing</a></li>
+        <li><a href="#index-optimization">Optimization</a></li>
+        <li class="current"><a href="#index-evaluation">Evaluation</a></li>
+      </ul>
+    </section>
+    
+    <section id="evaluation-steps" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-steps">
+      <h2 property="schema:name">Evaluating the optimized query plan</h2>
+      <ul>
+          <li>
+          	  <h3>Bottom-up</h3>
+			  <span class="indent">Start with leaves in query plan, and work up to the root.</span>
+          </li>
+          <li>
+          	  <h3>Parallelisation</h3>
+			  <span class="indent">Evaluate independent branches in parallel on different threads.</span>
+          </li>
+          <li>
+          	  <h3>Pipelining</h3>
+			  <span class="indent">Reduce time to first result.</span>
+          </li>
+          <li>
+          	  <h3>Adaptive processing</h3>
+			  <span class="indent">Advanced: adaptively modify the query plan at runtime.</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="evaluation-bottomup-1" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-1" style="font-size: 0.9em">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <p><em>Based on operator type</em></p>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em">    "type": "bgp",
+    "patterns": [
+      {
+</pre><pre style="font-size: 0.7em">        "type": "pattern",
+        "subject": { ... },
+        "predicate": { ... },
+        "object": { ... }</pre><pre style="font-size: 0.7em">
+      },
+      {
+</pre><pre style="font-size: 0.7em">        "type": "pattern",
+        "subject": { ... },
+        "predicate": { ... },
+        "object": { ... }</pre><pre style="font-size: 0.7em">
+      }
+    ]
+  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-2" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-2">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em">    "type": "bgp",
+    "patterns": [
+      {
+</pre><pre style="font-size: 0.7em; font-weight: bold">        "type": "pattern",
+        "subject": { ... },
+        "predicate": { ... },
+        "object": { ... }</pre><pre style="font-size: 0.7em">
+      },
+      {
+</pre><pre style="font-size: 0.7em">        "type": "pattern",
+        "subject": { ... },
+        "predicate": { ... },
+        "object": { ... }</pre><pre style="font-size: 0.7em">
+      }
+    ]
+  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-3" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-3">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em">    "type": "bgp",
+    "patterns": [
+      {
+</pre><pre style="font-size: 0.7em; font-weight: bold">        ...solution sequence...</pre><pre style="font-size: 0.7em">
+      },
+      {
+</pre><pre style="font-size: 0.7em">        "type": "pattern",
+        "subject": { ... },
+        "predicate": { ... },
+        "object": { ... }</pre><pre style="font-size: 0.7em">
+      }
+    ]
+  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-4" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-4">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em">    "type": "bgp",
+    "patterns": [
+      {
+</pre><pre style="font-size: 0.7em">        ...solution sequence...</pre><pre style="font-size: 0.7em">
+      },
+      {
+</pre><pre style="font-size: 0.7em; font-weight: bold">        "type": "pattern",
+        "subject": { ... },
+        "predicate": { ... },
+        "object": { ... }</pre><pre style="font-size: 0.7em">
+      }
+    ]
+  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-5" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-5">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em">    "type": "bgp",
+    "patterns": [
+      {
+</pre><pre style="font-size: 0.7em">        ...solution sequence...</pre><pre style="font-size: 0.7em">
+      },
+      {
+</pre><pre style="font-size: 0.7em; font-weight: bold">        ...solution sequence...</pre><pre style="font-size: 0.7em">
+      }
+    ]
+  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-6" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-6">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em; font-weight: bold">    "type": "bgp",
+    "patterns": [
+      {
+        ...solution sequence...
+      },
+      {
+        ...solution sequence...
+      }
+    ]
+</pre><pre style="font-size: 0.7em">  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-7" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-7">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+</pre><pre style="font-size: 0.7em; font-weight: bold">    ...solution sequence...</pre>
+</pre><pre style="font-size: 0.7em">  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-8" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-8">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em; font-weight: bold">
+{
+  "type": "project",
+  "variables": [ ... ]
+  "input": {
+    ...solution sequence...
+  }
+}</pre>
+    </section>
+    
+    <section id="evaluation-bottomup-8" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-bottomup-8">
+      <h2 property="schema:name">Evaluation iteratively handles leaf nodes</h2>
+      <pre style="font-size: 0.7em; font-weight: bold">
+...solution sequence...</pre>
+    </section>
+    
+    <section id="evaluation-parallel" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-parallel" style="font-size: 0.85em">
+      <h2 property="schema:name">Some operations can be parallelised</h2>
+      <ul>
+          <li>
+          	  <h3>Operators with multiple independent inputs</h3>
+              <span class="indent">UNION branches are fully independent</span><br /><br />
+			  <span class="indent">Triple patterns in BGPs can be handled independently based on the algorithm</span><br /><br />
+              <span class="indent">Some joins can be partially handled independently (e.g. sorting step in sort-merge join)</span>
+          </li>
+          <li>
+          	  <h3>Local threads vs. distributed machines</h3>
+			  <span class="indent">Communication cost may be high &rarr; parallelising not always beneficial</span>
+          </li>
+          <li>
+          	  <h3>I/O vs. CPU cost</h3>
+			  <span class="indent">Depending on how data is stored, I/O may be the bottleneck</span><br /><br />
+              <span class="indent">E.g. remotely stored data &rarr; HTTP is bottleneck instead of CPU</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="evaluation-pipelining" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-pipelining">
+      <h2 property="schema:name" style="font-size: 1.7em">Pipelining produces results as soon as possible</h2>
+      <ul>
+          <li>
+          	  <h3>Evaluating operators after each other is sub-optimal</h3>
+              <span class="indent">Requires intermediary results to be kept in memory</span><br /><br />
+			  <span class="indent">Results only become available once everything is done processing</span>
+          </li>
+          <li>
+          	  <h3>Pipelining enables intermediary results to flow through operators</h3>
+              <span class="indent">In general, intermediary results do not have to be kept in memory</span><br /><br />
+			  <span class="indent">Query results are produced as a stream, as soon as they are available</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="evaluation-pipelining-example" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-pipelining-example">
+      <h2 property="schema:name">A pipeline of operators</h2>
+      <center><img src="img/pipeline.svg" /></center>
+    </section>
+    
+    <section id="evaluation-adaptive" class="slide" inlist="" rel="schema:hasPart" resource="#evaluation-adaptive">
+      <h2 property="schema:name">Adaptive processing responds to changing conditions</h2>
+      <ul>
+          <li>
+          	  <h3>Query optimization as preprocessing is restrictive</h3>
+              <span class="indent">Assumes that all information is known beforehand</span><br /><br />
+			  <span class="indent">Can not cope with volatile distributed environments</span>
+          </li>
+          <li>
+          	  <h3>Adaptive query processing: optimization during evaluation</h3>
+              <span class="indent">Modify query plan based on network or data changes</span><br /><br />
+			  <span class="indent">Algorithms are typically more complex</span>
+          </li>
+      </ul>
+    </section>
+    
+    <section id="index-final" class="slide index" inlist="" rel="schema:hasPart" resource="#index-final">
+      <ul>
+        <li><a href="#index-basics">Basics and Terminology</a></li>
+		<li><a href="#index-parsing">Parsing</a></li>
+        <li><a href="#index-optimization">Optimization</a></li>
+        <li><a href="#index-evaluation">Evaluation</a></li>
       </ul>
     </section>
 	
     <section id="conclusion" class="slide" inlist="" rel="schema:hasPart" resource="#conclusion">
-      <h2 property="schema:name" class="big">TODO: Conclusion</h2>
+      <h2 property="schema:name">Conclusions</h2>
+      <ul>
+          <li>
+          	  <h3>Different steps in SPARQL query processing</h3>
+			  <span class="indent">Parsing, optimization, evaluation</span>
+          </li>
+          <li>
+          	  <h3>Query optimization is crucial for performance</h3>
+			  <span class="indent">Based on heuristics and statistics</span><br /><br />
+              <span class="indent">Most research happens in this area</span>
+          </li>
+          <li>
+          	  <h3>Learn more from real-world SPARQL query engines</h3>
+			  <span class="indent"><a href="https://comunica.dev/">Comunica</a> (TypeScript/JavaScript) and <a href="https://jena.apache.org/">Jena</a> (Java) are open-source</span><br /><br />
+              <span class="indent"><a href="https://query.comunica.dev/">https://query.comunica.dev/</a></span>
+          </li>
+      </ul>
     </section>
 
     <footer>
