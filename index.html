@@ -26,6 +26,34 @@
       table.query-results tbody tr {
           border: solid 1px gray;
       }
+
+      pre.sparql {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1em;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 18px;
+      }
+
+      /* Keywords */
+      .sparql-keyword { color: #569cd6; font-weight: bold; }
+
+      /* Variables */
+      .sparql-variable { color: #9cdcfe; }
+
+      /* Strings */
+      .sparql-string { color: #ce9178; }
+
+      /* Prefixed names */
+      .sparql-prefix { color: #4ec9b0; }
+
+      /* Functions */
+      .sparql-function { color: #c586c0; }
+
+      /* Comments */
+      .sparql-comment { color: #6a9955; font-style: italic; }
     </style>
   </head>
 
@@ -73,7 +101,7 @@
     <section id="example" class="slide" inlist="" rel="schema:hasPart" resource="#example" style="font-size: 0.9em">
         <h2 property="schema:name">Find all artists born in York</h2>
         <ul>
-            <li><pre>SELECT ?name ?deathDate WHERE {
+            <li><pre class="sparql">SELECT ?name ?deathDate WHERE {
   ?person a dbpedia-owl:Artist;
           rdfs:label ?name;
           dbpedia-owl:birthPlace [ rdfs:label "York"@en ].
@@ -791,5 +819,38 @@
     </footer>
 
     <script src="shower/shower.min.js"></script>
+    <script>
+    function highlightSPARQL(code) {
+      return code
+        // Escape HTML first
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+
+        // Comments
+        .replace(/(#.*)/g, '<span class="sparql-comment">$1</span>')
+
+        // Strings with optional language tag
+        .replace(/(".*?"(@[a-zA-Z-]+)?)/g,
+          '<span class="sparql-string">$1</span>')
+
+        // Variables
+        .replace(/(\?[a-zA-Z_][a-zA-Z0-9_]*)/g,
+          '<span class="sparql-variable">$1</span>')
+
+        // Prefixed names (e.g., dbpedia-owl:Artist)
+        .replace(/([a-zA-Z_-]+:[a-zA-Z_-]+)/g,
+          '<span class="sparql-prefix">$1</span>')
+
+        // Keywords
+        .replace(/\b(SELECT|WHERE|FILTER|OPTIONAL|LANGMATCHES|LANG|a)\b/g,
+          '<span class="sparql-keyword">$1</span>');
+    }
+
+    document.querySelectorAll("pre.sparql").forEach(block => {
+        console.log(block);
+      block.innerHTML = highlightSPARQL(block.textContent);
+    });
+    </script>
   </body>
 </html>
